@@ -1,72 +1,52 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using FloatingTodoWidget.Models;
 
 namespace FloatingTodoWidget.Services
 {
-    /// <summary>JSON persistence via System.Text.Json (no third-party deps).</summary>
     public sealed class JsonStorageService : IStorageService
     {
-        private static readonly JsonSerializerOptions Options = new()
+        private static readonly JsonSerializerOptions Opts = new()
         {
             WriteIndented = true,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
 
-        public List<TodoItem> LoadTasks()
+        public AppData LoadData()
         {
             try
             {
-                if (!File.Exists(AppPaths.DataFile))
-                    return new List<TodoItem>();
-
-                var json = File.ReadAllText(AppPaths.DataFile);
-                return JsonSerializer.Deserialize<List<TodoItem>>(json, Options)
-                       ?? new List<TodoItem>();
+                if (!File.Exists(AppPaths.DataFile)) return new AppData();
+                return JsonSerializer.Deserialize<AppData>(File.ReadAllText(AppPaths.DataFile), Opts)
+                       ?? new AppData();
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to load tasks", ex);
-                return new List<TodoItem>();
-            }
+            catch (Exception ex) { Logger.Error("LoadData failed", ex); return new AppData(); }
         }
 
-        public void SaveTasks(IEnumerable<TodoItem> tasks)
+        public void SaveData(AppData data)
         {
             try
             {
                 AppPaths.EnsureFolder();
-                var json = JsonSerializer.Serialize(tasks.ToList(), Options);
-                // Write to a temp file then atomically replace the target.
-                // File.Move with overwrite is a single OS operation — no separate delete needed.
                 var tmp = AppPaths.DataFile + ".tmp";
-                File.WriteAllText(tmp, json);
+                File.WriteAllText(tmp, JsonSerializer.Serialize(data, Opts));
                 File.Move(tmp, AppPaths.DataFile, overwrite: true);
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to save tasks", ex);
-            }
+            catch (Exception ex) { Logger.Error("SaveData failed", ex); }
         }
 
         public AppSettings LoadSettings()
         {
             try
             {
-                if (!File.Exists(AppPaths.SettingsFile))
-                    return new AppSettings();
-
-                var json = File.ReadAllText(AppPaths.SettingsFile);
-                return JsonSerializer.Deserialize<AppSettings>(json, Options) ?? new AppSettings();
+                if (!File.Exists(AppPaths.SettingsFile)) return new AppSettings();
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(AppPaths.SettingsFile), Opts)
+                       ?? new AppSettings();
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to load settings", ex);
-                return new AppSettings();
-            }
+            catch (Exception ex) { Logger.Error("LoadSettings failed", ex); return new AppSettings(); }
         }
 
         public void SaveSettings(AppSettings settings)
@@ -74,13 +54,9 @@ namespace FloatingTodoWidget.Services
             try
             {
                 AppPaths.EnsureFolder();
-                var json = JsonSerializer.Serialize(settings, Options);
-                File.WriteAllText(AppPaths.SettingsFile, json);
+                File.WriteAllText(AppPaths.SettingsFile, JsonSerializer.Serialize(settings, Opts));
             }
-            catch (Exception ex)
-            {
-                Logger.Error("Failed to save settings", ex);
-            }
+            catch (Exception ex) { Logger.Error("SaveSettings failed", ex); }
         }
     }
 }

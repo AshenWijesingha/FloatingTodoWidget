@@ -7,7 +7,12 @@
       "Bash(start \"\" \"bin\\\\Debug\\\\net8.0-windows\\\\FloatingTodoWidget.exe\")",
       "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-30-floating-todo-revamp.md 1)",
       "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 48b74ea HEAD)",
-      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-30-floating-todo-revamp.md 2)"
+      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-30-floating-todo-revamp.md 2)",
+      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package d9dc1e7 HEAD)",
+      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-30-floating-todo-revamp.md 3)",
+      "Bash(tee build.log)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

@@ -54,7 +54,8 @@ namespace FloatingTodoWidget.ViewModels
 
             // Load persisted tasks.
             _suspendSave = true;
-            foreach (var t in _storage.LoadTasks())
+            var appData = _storage.LoadData();
+            foreach (var t in appData.Tasks)
                 AddTaskInternal(t);
             _suspendSave = false;
 
@@ -196,7 +197,8 @@ namespace FloatingTodoWidget.ViewModels
         private void SaveTasks()
         {
             if (_suspendSave) return;
-            _storage.SaveTasks(Tasks);
+            var appData = new AppData { Tasks = Tasks.ToList() };
+            _storage.SaveData(appData);
         }
 
         public void SaveSettings() => _storage.SaveSettings(Settings);
