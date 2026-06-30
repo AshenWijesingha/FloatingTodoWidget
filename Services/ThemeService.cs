@@ -1,23 +1,25 @@
-using System;
 using System.Windows;
 
 namespace FloatingTodoWidget.Services
 {
-    /// <summary>Swaps the theme color dictionary at runtime (index 0 of merged dictionaries).</summary>
     public static class ThemeService
     {
         public static void Apply(bool dark)
         {
+            var src = dark
+                ? "Resources/Theme.Dark.xaml"
+                : "Resources/Theme.Light.xaml";
+
             var dict = new ResourceDictionary
             {
-                Source = new Uri(
-                    $"pack://application:,,,/Resources/Theme.{(dark ? "Dark" : "Light")}.xaml",
-                    UriKind.Absolute)
+                Source = new System.Uri(src, System.UriKind.Relative)
             };
 
             var merged = Application.Current.Resources.MergedDictionaries;
-            if (merged.Count == 0) merged.Add(dict);
-            else merged[0] = dict; // keep Styles.xaml (index 1) untouched
+            if (merged.Count > 0)
+                merged[0] = dict;
+            else
+                merged.Add(dict);
         }
     }
 }

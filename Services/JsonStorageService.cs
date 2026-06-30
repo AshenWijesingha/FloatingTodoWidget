@@ -20,10 +20,10 @@ namespace FloatingTodoWidget.Services
         {
             try
             {
-                if (!File.Exists(AppPaths.TasksFile))
+                if (!File.Exists(AppPaths.DataFile))
                     return new List<TodoItem>();
 
-                var json = File.ReadAllText(AppPaths.TasksFile);
+                var json = File.ReadAllText(AppPaths.DataFile);
                 return JsonSerializer.Deserialize<List<TodoItem>>(json, Options)
                        ?? new List<TodoItem>();
             }
@@ -38,13 +38,13 @@ namespace FloatingTodoWidget.Services
         {
             try
             {
-                Directory.CreateDirectory(AppPaths.Folder);
+                AppPaths.EnsureFolder();
                 var json = JsonSerializer.Serialize(tasks.ToList(), Options);
                 // Write to a temp file then atomically replace the target.
                 // File.Move with overwrite is a single OS operation — no separate delete needed.
-                var tmp = AppPaths.TasksFile + ".tmp";
+                var tmp = AppPaths.DataFile + ".tmp";
                 File.WriteAllText(tmp, json);
-                File.Move(tmp, AppPaths.TasksFile, overwrite: true);
+                File.Move(tmp, AppPaths.DataFile, overwrite: true);
             }
             catch (Exception ex)
             {
@@ -73,7 +73,7 @@ namespace FloatingTodoWidget.Services
         {
             try
             {
-                Directory.CreateDirectory(AppPaths.Folder);
+                AppPaths.EnsureFolder();
                 var json = JsonSerializer.Serialize(settings, Options);
                 File.WriteAllText(AppPaths.SettingsFile, json);
             }

@@ -3,50 +3,25 @@ using Microsoft.Win32;
 
 namespace FloatingTodoWidget.Services
 {
-    /// <summary>Toggles "start with Windows" via the per-user Run registry key (no admin needed).</summary>
     public static class StartupService
     {
-        private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
-        private const string AppName = "FloatingTodoWidget";
+        private const string Key  = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+        private const string Name = "FloatingTodoWidget";
 
         public static bool IsEnabled()
         {
-            try
-            {
-                using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: false);
-                return key?.GetValue(AppName) is not null;
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Read autostart failed", ex);
-                return false;
-            }
+            using var k = Registry.CurrentUser.OpenSubKey(Key, false);
+            return k?.GetValue(Name) != null;
         }
 
         public static void SetEnabled(bool enable)
         {
-            try
-            {
-                using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true)
-                                ?? Registry.CurrentUser.CreateSubKey(RunKey);
-                if (key is null) return;
-
-                if (enable)
-                {
-                    // Environment.ProcessPath = the running .exe (.NET 6+).
-                    var exe = Environment.ProcessPath;
-                    if (!string.IsNullOrEmpty(exe))
-                        key.SetValue(AppName, $"\"{exe}\"");
-                }
-                else
-                {
-                    key.DeleteValue(AppName, throwOnMissingValue: false);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("Write autostart failed", ex);
-            }
+            using var k = Registry.CurrentUser.OpenSubKey(Key, true);
+            if (k == null) return;
+            if (enable)
+                k.SetValue(Name, $"\"{Environment.ProcessPath}\"");
+            else
+                k.DeleteValue(Name, throwOnMissingValue: false);
         }
     }
 }
