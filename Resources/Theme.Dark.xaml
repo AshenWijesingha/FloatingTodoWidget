@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Acrylic tint (0xAABBGGRR) read by NativeMethods.EnableAcrylic -->
+    <system:UInt32 xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="AcrylicTint">0xB31E1E26</system:UInt32>
+
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#B31E1E26"/>
+    <SolidColorBrush x:Key="SurfaceBrush"          Color="#33FFFFFF"/>
+    <SolidColorBrush x:Key="HoverBrush"            Color="#1AFFFFFF"/>
+    <SolidColorBrush x:Key="TextBrush"             Color="#FFF1F1F6"/>
+    <SolidColorBrush x:Key="SubtleTextBrush"       Color="#FF9A9AA6"/>
+    <SolidColorBrush x:Key="AccentBrush"           Color="#FF6C8CFF"/>
+    <SolidColorBrush x:Key="BorderBrush"           Color="#33FFFFFF"/>
+    <SolidColorBrush x:Key="DangerBrush"           Color="#FFE05260"/>
+</ResourceDictionary>
