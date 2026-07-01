@@ -1,14 +1,20 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
-    <system:UInt32 xmlns:system="clr-namespace:System;assembly=mscorlib" x:Key="AcrylicTint">0xCCF4F4F8</system:UInt32>
-
-    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#CCF6F6FA"/>
-    <SolidColorBrush x:Key="SurfaceBrush"          Color="#66FFFFFF"/>
-    <SolidColorBrush x:Key="HoverBrush"            Color="#11000000"/>
-    <SolidColorBrush x:Key="TextBrush"             Color="#FF1B1B22"/>
-    <SolidColorBrush x:Key="SubtleTextBrush"       Color="#FF6B6B78"/>
-    <SolidColorBrush x:Key="AccentBrush"           Color="#FF3F5FE0"/>
-    <SolidColorBrush x:Key="BorderBrush"           Color="#22000000"/>
-    <SolidColorBrush x:Key="DangerBrush"           Color="#FFD23344"/>
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#E8EFEFEF"/>
+    <SolidColorBrush x:Key="SurfaceBrush"          Color="#F5F5F5"/>
+    <SolidColorBrush x:Key="SurfaceAltBrush"       Color="#ECECEC"/>
+    <SolidColorBrush x:Key="BorderBrush"           Color="#D0D0D0"/>
+    <SolidColorBrush x:Key="TextBrush"             Color="#1A1A1A"/>
+    <SolidColorBrush x:Key="SubtleTextBrush"       Color="#777"/>
+    <SolidColorBrush x:Key="AccentBrush"           Color="#5B7FFF"/>
+    <SolidColorBrush x:Key="HoverBrush"            Color="#E5E5E5"/>
+    <SolidColorBrush x:Key="ExpandedBgBrush"       Color="#EDEDED"/>
+    <SolidColorBrush x:Key="InputBgBrush"          Color="#F0F0F0"/>
+    <SolidColorBrush x:Key="TabActiveBrush"        Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="TabInactiveBrush"      Color="Transparent"/>
+    <SolidColorBrush x:Key="SeparatorBrush"        Color="#DDD"/>
+    <SolidColorBrush x:Key="OverdueBrush"          Color="#D0323F"/>
+    <SolidColorBrush x:Key="DueTodayBrush"         Color="#D08020"/>
+    <sys:UInt32 x:Key="AcrylicTint">0x88F0F0F0</sys:UInt32>
 </ResourceDictionary>
