@@ -36,7 +36,7 @@ namespace FloatingTodoWidget
             _vm.ExitRequested       += (_, _) => Close();
             _vm.ShowWindowRequested += (_, _) => { Show(); Activate(); WindowState = WindowState.Normal; };
             _vm.FocusInputRequested += (_, _) => { InputBox.Focus(); InputBox.SelectAll(); };
-            _vm.WindowModeChangeRequested += (_, _) => ApplyWindowMode(_vm.WindowMode);
+            _vm.WindowModeChangeRequested += (_, mode) => ApplyWindowMode(mode);
         }
 
         protected override void OnSourceInitialized(EventArgs e)

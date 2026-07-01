@@ -57,7 +57,7 @@ namespace FloatingTodoWidget.ViewModels
         public event EventHandler? ExitRequested;
         public event EventHandler? FocusInputRequested;
         public event EventHandler? ShowWindowRequested;
-        public event EventHandler? WindowModeChangeRequested;
+        public event EventHandler<string>? WindowModeChangeRequested;
         public event EventHandler? DataChanged; // for NotificationService to re-check
 
         // ── Computed helpers ──
@@ -305,7 +305,7 @@ namespace FloatingTodoWidget.ViewModels
         {
             if (string.IsNullOrEmpty(mode)) return;
             WindowMode = mode;
-            WindowModeChangeRequested?.Invoke(this, EventArgs.Empty);
+            // OnWindowModeChanged fires WindowModeChangeRequested
         }
 
         // ─────────────────── Sub-task Commands ───────────────────
@@ -441,6 +441,7 @@ namespace FloatingTodoWidget.ViewModels
         {
             Settings.WindowMode = value;
             SaveSettings();
+            WindowModeChangeRequested?.Invoke(this, value);
         }
 
         // ─────────────────── Parse Preview ───────────────────
