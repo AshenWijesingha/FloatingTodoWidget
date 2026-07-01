@@ -2,26 +2,32 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
-using FloatingTodoWidget.Services;
 
 namespace FloatingTodoWidget.Helpers
 {
-    /// <summary>
-    /// Win32 interop for acrylic blur-behind and click-through.
-    /// All calls are wrapped so any failure degrades gracefully (plain semi-transparent window).
-    /// </summary>
-    internal static class NativeMethods
+    public static class NativeMethods
     {
-        // ---- Acrylic / blur-behind ----
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hwnd, int nIndex, int dwNewLong);
+        [DllImport("user32.dll")]
+        private static extern int GetWindowLong(IntPtr hwnd, int nIndex);
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmExtendFrameIntoClientArea(IntPtr hwnd, ref MARGINS m);
         [DllImport("user32.dll")]
         private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
+
+        private const int GWL_EXSTYLE = -20;
+        private const int WS_EX_TRANSPARENT = 0x00000020;
+        private const int WS_EX_LAYERED     = 0x00080000;
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MARGINS { public int Left, Right, Top, Bottom; }
 
         [StructLayout(LayoutKind.Sequential)]
         private struct AccentPolicy
         {
-            public int AccentState;
-            public int AccentFlags;
-            public uint GradientColor; // AABBGGRR
+            public int AccentState, AccentFlags;
+            public uint GradientColor;
             public int AnimationId;
         }
 
@@ -33,74 +39,30 @@ namespace FloatingTodoWidget.Helpers
             public int SizeOfData;
         }
 
-        private const int WCA_ACCENT_POLICY = 19;
-        private const int ACCENT_ENABLE_ACRYLICBLURBEHIND = 4; // Win10 1803+/Win11
-        private const int ACCENT_ENABLE_BLURBEHIND = 3;        // older fallback
-
-        /// <param name="tintAabbggrr">Tint color in 0xAABBGGRR. Alpha controls how opaque the tint is.</param>
-        public static void EnableAcrylic(Window window, uint tintAabbggrr)
+        public static void EnableAcrylic(Window window, uint tintColor)
         {
             try
             {
                 var hwnd = new WindowInteropHelper(window).Handle;
-                if (hwnd == IntPtr.Zero) return;
-
-                var accent = new AccentPolicy
-                {
-                    AccentState = ACCENT_ENABLE_ACRYLICBLURBEHIND,
-                    GradientColor = tintAabbggrr
-                };
-
-                var size = Marshal.SizeOf(accent);
+                var accent = new AccentPolicy { AccentState = 4, GradientColor = tintColor };
+                int size = Marshal.SizeOf(accent);
                 var ptr = Marshal.AllocHGlobal(size);
-                try
-                {
-                    Marshal.StructureToPtr(accent, ptr, false);
-                    var data = new WindowCompositionAttributeData
-                    {
-                        Attribute = WCA_ACCENT_POLICY,
-                        SizeOfData = size,
-                        Data = ptr
-                    };
-                    SetWindowCompositionAttribute(hwnd, ref data);
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(ptr);
-                }
+                Marshal.StructureToPtr(accent, ptr, false);
+                var data = new WindowCompositionAttributeData { Attribute = 19, Data = ptr, SizeOfData = size };
+                SetWindowCompositionAttribute(hwnd, ref data);
+                Marshal.FreeHGlobal(ptr);
             }
-            catch (Exception ex)
-            {
-                // Fallback: the window simply stays semi-transparent via its Border background.
-                Logger.Error("EnableAcrylic failed; using fallback", ex);
-            }
+            catch { /* acrylic optional */ }
         }
-
-        // ---- Click-through ----
-        [DllImport("user32.dll")] private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-        [DllImport("user32.dll")] private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        private const int GWL_EXSTYLE = -20;
-        private const int WS_EX_TRANSPARENT = 0x20;
-        private const int WS_EX_LAYERED = 0x80000;
 
         public static void SetClickThrough(Window window, bool enable)
         {
-            try
-            {
-                var hwnd = new WindowInteropHelper(window).Handle;
-                if (hwnd == IntPtr.Zero) return;
-
-                var ex = GetWindowLong(hwnd, GWL_EXSTYLE);
-                ex = enable
-                    ? ex | WS_EX_LAYERED | WS_EX_TRANSPARENT
-                    : ex & ~WS_EX_TRANSPARENT;
-                SetWindowLong(hwnd, GWL_EXSTYLE, ex);
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("SetClickThrough failed", ex);
-            }
+            var hwnd = new WindowInteropHelper(window).Handle;
+            int style = GetWindowLong(hwnd, GWL_EXSTYLE);
+            style = enable
+                ? style | WS_EX_TRANSPARENT | WS_EX_LAYERED
+                : style & ~WS_EX_TRANSPARENT;
+            SetWindowLong(hwnd, GWL_EXSTYLE, style);
         }
     }
 }

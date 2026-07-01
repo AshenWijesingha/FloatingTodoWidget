@@ -16,7 +16,11 @@
       "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 3045052 HEAD)",
       "Bash(sed -i 's/- \\\\[ \\\\] Task 3:/- [x] Task 3:/' .superpowers/sdd/progress.md)",
       "Bash(echo \"Task 3: complete \\(commits 3045052..2f63560, review clean — minor: SaveSettings non-atomic per plan spec\\)\")",
-      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-30-floating-todo-revamp.md 4)"
+      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-30-floating-todo-revamp.md 4)",
+      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/review-package 2f63560 HEAD)",
+      "Bash(sed -i 's/- \\\\[ \\\\] Task 4:/- [x] Task 4:/' .superpowers/sdd/progress.md)",
+      "Bash(echo \"Task 4: complete \\(commits 2f63560..33b56ac, review clean\\)\")",
+      "Bash(bash /c/Users/Ashen/.claude/plugins/cache/claude-plugins-official/superpowers/6.0.3/skills/subagent-driven-development/scripts/task-brief docs/superpowers/plans/2026-06-30-floating-todo-revamp.md 5)"
     ]
   }
 }
