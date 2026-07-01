@@ -82,7 +82,7 @@ namespace FloatingTodoWidget.Services
             if (count > 0)
             {
                 var text = count > 99 ? "99" : count.ToString();
-                var font = new System.Drawing.Font("Arial", 7f, System.Drawing.FontStyle.Bold);
+                using var font = new System.Drawing.Font("Arial", 7f, System.Drawing.FontStyle.Bold);
                 var sf = new System.Drawing.StringFormat
                 {
                     Alignment     = StringAlignment.Center,

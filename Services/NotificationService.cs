@@ -44,7 +44,8 @@ namespace FloatingTodoWidget.Services
                 else if (!task.DueSoonNotified)
                 {
                     int notify = task.NotifyMinutesBefore ?? _vm.Settings.DefaultNotifyMinutes;
-                    if (notify > 0 && (due - now).TotalMinutes <= notify && (due - now).TotalMinutes > 0)
+                    var remainingMinutes = (due - now).TotalMinutes;
+                    if (notify > 0 && remainingMinutes <= notify && remainingMinutes > 0)
                     {
                         task.DueSoonNotified = true;
                         Notify("Due Soon", $"{task.Title} \u2014 due {due:HH:mm}", System.Windows.Forms.ToolTipIcon.Info);
