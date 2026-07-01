@@ -92,10 +92,10 @@ namespace FloatingTodoWidget.ViewModels
             // Tasks.Add → CollectionChanged → TasksView.Refresh) sees empty text and aborts.
             NewTaskText = string.Empty;
 
-            var (title, priority, due) = QuickAddParser.Parse(raw);
-            if (string.IsNullOrWhiteSpace(title)) return;
+            var parsed = QuickAddParser.Parse(raw);
+            if (string.IsNullOrWhiteSpace(parsed.Title)) return;
 
-            AddTaskInternal(new TodoItem { Title = title, Priority = priority, DueDate = due });
+            AddTaskInternal(new TodoItem { Title = parsed.Title, Priority = parsed.Priority, DueDate = parsed.DueDate });
             SaveTasks();
         }
 
