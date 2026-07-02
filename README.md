@@ -18,20 +18,25 @@ Built with **.NET 8 · WPF · CommunityToolkit.Mvvm · System.Text.Json** — no
 - **Live parse preview** — tokens highlighted below input as you type
 - **Priority** — None / Low / Medium / High; click the colored side bar to cycle
 - **Due dates** — overdue tasks highlighted red, due-today tasks amber
+- **Recurring tasks** — `@daily` / `@weekly` / `@monthly`; completing one automatically
+  spawns the next occurrence, offset from the due date that was just completed
 - **Sub-tasks** — inline checklist inside each expanded task
 - **Notes** — multi-line plain text per task
 - **Links** — clickable URLs per task, opens in browser
-- **Sort** — Priority / Due Date / Created / Alphabetical
+- **Search** — live filter by title text
+- **Sort** — Priority / Due Date / Created / Alphabetical / Manual (drag to reorder)
 
 ### Organization
-- **Projects** — named, colored tabs (Inbox + custom projects)
+- **Projects** — named, colored tabs (Inbox + custom projects), each with a live pending-count badge
 - **Tags** — multi-tag per task, filter chips to narrow the list
 - **Show/hide completed**, **Clear completed**
+- **Export** — save the current task list as plain text (`.txt`) or CSV (`.csv`)
 
 ### Notifications
 - **Windows balloon tip** alerts for due-soon and overdue tasks
 - Per-task notification override (`@notify:Xm` / `@notify:Xh`), or set a global default
 - Visual overdue highlighting always active (independent of notification setting)
+- Editing a task's due date, or reopening a completed task, re-arms its notifications
 
 ### Window Modes
 | Mode | Behavior |
@@ -41,10 +46,13 @@ Built with **.NET 8 · WPF · CommunityToolkit.Mvvm · System.Text.Json** — no
 | **Tray** | Hidden; NotifyIcon in system tray with pending count badge |
 
 ### Other
+- **Global hotkey** (`Ctrl+Alt+T`, toggleable) — shows and focuses the widget from anywhere,
+  even when it's hidden in Tray mode
 - Acrylic blur background (Win10 1803+ / Win11)
 - Dark / light theme toggle
 - Always-on-top toggle
 - Click-through mode
+- Window opacity presets (50–100%)
 - Auto-start with Windows (per-user, no admin required)
 - Window position & size persisted across launches
 - Drag to move from anywhere on the widget
@@ -57,6 +65,7 @@ Built with **.NET 8 · WPF · CommunityToolkit.Mvvm · System.Text.Json** — no
 |-------|---------|--------|
 | `!priority` | `!high` `!med` `!low` | Set priority |
 | `@date` | `@2026-07-05` `@today` `@tomorrow` | Due date |
+| `@recurrence` | `@daily` `@weekly` `@monthly` | Repeats on completion (defaults due date to today if none given) |
 | `@notify:Xm/Xh` | `@notify:30m` `@notify:2h` | Notification lead time |
 | `#name` | `#work` | Project (creates if new) |
 | `~tag` | `~bug` `~bug,frontend` | Tags (comma-separated, creates if new) |

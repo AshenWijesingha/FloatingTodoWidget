@@ -17,7 +17,9 @@ namespace FloatingTodoWidget.Models
         public bool AutoStart { get; set; } = false;
         public bool NotificationsEnabled { get; set; } = true;
         public int DefaultNotifyMinutes { get; set; } = 30;
-        public string SortMode { get; set; } = "Priority"; // Priority | DueDate | Created | Alpha
+        public string SortMode { get; set; } = "Priority"; // Priority | DueDate | Created | Alpha | Manual
         public Guid? ActiveProjectId { get; set; }
+        public bool GlobalHotkeyEnabled { get; set; } = true; // Ctrl+Alt+T shows/focuses the widget
+        public double WindowOpacity { get; set; } = 1.0;
     }
 }
