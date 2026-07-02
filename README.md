@@ -1,37 +1,87 @@
-# Floating To-Do Widget
+# Floating Todo Widget
 
-A minimalist, always-on-top floating to-do widget for Windows 10/11, built with
-**.NET 8 + WPF + CommunityToolkit.Mvvm**. Uses only `System.Text.Json` for
-persistence, so the dependency footprint is tiny.
+A lightweight, always-on-top floating task manager for Windows 10/11.  
+Built with **.NET 8 · WPF · CommunityToolkit.Mvvm · System.Text.Json** — no database, no heavy frameworks.
+
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
+![.NET](https://img.shields.io/badge/.NET-8-purple)
+
+---
 
 ## Features
-- Borderless, always-on-top, drag-to-move floating widget
-- Acrylic blur (Win10 1803+/Win11) with graceful fallback to semi-transparent
-- Dark / light themes (toggle in header or right-click menu)
-- Add tasks with quick-add syntax: `Buy milk !high @2026-07-05`
-  - Priority tokens: `!high` / `!med` / `!low` (or `!h` `!m` `!l`)
-  - Due date token: `@yyyy-MM-dd`
-- Checkbox to complete (strike-through + dim), trash icon to delete
-- Click the colored left bar to cycle priority (none -> low -> med -> high)
-- Pending count badge, "Clear done", show/hide completed
-- Smooth fade + slide-in animations
-- Start with Windows toggle (per-user, no admin)
-- Window position/size + preferences persisted across launches
-- Single-instance, global error logging
-- Keyboard: Ctrl+N / Ctrl+F focus the input, Enter adds
 
-## Data locations
-All stored under `%AppData%\FloatingTodoWidget`:
-- `tasks.json`     - your tasks
-- `settings.json`  - window bounds + preferences
-- `app.log`        - error log
+### Tasks
+- **Quick-add syntax** — type natural tokens, hit Enter:
+  ```
+  Fix login bug !high @2026-07-05 @notify:30m #work ~bug,frontend "check docs" https://jira/123
+  ```
+- **Live parse preview** — tokens highlighted below input as you type
+- **Priority** — None / Low / Medium / High; click the colored side bar to cycle
+- **Due dates** — overdue tasks highlighted red, due-today tasks amber
+- **Sub-tasks** — inline checklist inside each expanded task
+- **Notes** — multi-line plain text per task
+- **Links** — clickable URLs per task, opens in browser
+- **Sort** — Priority / Due Date / Created / Alphabetical
 
-## Build & run
+### Organization
+- **Projects** — named, colored tabs (Inbox + custom projects)
+- **Tags** — multi-tag per task, filter chips to narrow the list
+- **Show/hide completed**, **Clear completed**
 
-### Visual Studio 2022
-1. Open `FloatingTodoWidget.csproj`.
-2. Restore NuGet (CommunityToolkit.Mvvm restores automatically).
-3. Press Ctrl+F5.
+### Notifications
+- **Windows balloon tip** alerts for due-soon and overdue tasks
+- Per-task notification override (`@notify:Xm` / `@notify:Xh`), or set a global default
+- Visual overdue highlighting always active (independent of notification setting)
+
+### Window Modes
+| Mode | Behavior |
+|------|----------|
+| **Full** | Always visible at configured bounds |
+| **Collapse** | Shrinks to 32px bar on mouse leave; expands on hover |
+| **Tray** | Hidden; NotifyIcon in system tray with pending count badge |
+
+### Other
+- Acrylic blur background (Win10 1803+ / Win11)
+- Dark / light theme toggle
+- Always-on-top toggle
+- Click-through mode
+- Auto-start with Windows (per-user, no admin required)
+- Window position & size persisted across launches
+- Drag to move from anywhere on the widget
+
+---
+
+## Quick-Add Syntax
+
+| Token | Example | Effect |
+|-------|---------|--------|
+| `!priority` | `!high` `!med` `!low` | Set priority |
+| `@date` | `@2026-07-05` `@today` `@tomorrow` | Due date |
+| `@notify:Xm/Xh` | `@notify:30m` `@notify:2h` | Notification lead time |
+| `#name` | `#work` | Project (creates if new) |
+| `~tag` | `~bug` `~bug,frontend` | Tags (comma-separated, creates if new) |
+| `"text"` | `"check docs first"` | Inline note |
+| bare URL | `https://jira/123` | Added as a link |
+
+Everything else becomes the task title. Tokens are order-independent.
+
+---
+
+## Data
+
+Stored under `%AppData%\FloatingTodoWidget`:
+
+| File | Contents |
+|------|----------|
+| `data.json` | Projects, tags, and tasks |
+| `settings.json` | Window bounds and preferences |
+| `app.log` | Error log |
+
+Writes are atomic (temp file + `File.Move` overwrite) to prevent corruption.
+
+---
+
+## Build & Run
 
 ### CLI
 ```bash
@@ -39,21 +89,25 @@ dotnet restore
 dotnet run
 ```
 
-### Publish a portable single-file EXE
+### Visual Studio 2022
+Open `FloatingTodoWidget.csproj`, restore NuGet, press `Ctrl+F5`.
+
+### Single-file EXE (self-contained)
 ```bash
 dotnet publish -c Release -r win-x64 --self-contained true \
   -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
 ```
-Framework-dependent (smaller, needs .NET 8 Desktop runtime installed): drop
-`--self-contained true`.
 
-## Targeting .NET 6 or 7
-Change the TFM in `FloatingTodoWidget.csproj`:
-```xml
-<TargetFramework>net6.0-windows</TargetFramework>
+Framework-dependent (smaller, requires .NET 8 Desktop Runtime):
+```bash
+dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true
 ```
 
-## Ideas for improvement
-Tray icon + minimize-to-tray, toast notifications for due dates, a settings
-window with a real DatePicker, drag-to-reorder, subtasks/tags/search,
-edit-in-place, undo, and cloud sync (OneDrive folder / small REST backend).
+---
+
+## Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `CommunityToolkit.Mvvm` 8.x | MVVM source generators |
+| `System.Windows.Forms` (built-in) | NotifyIcon for tray mode |
