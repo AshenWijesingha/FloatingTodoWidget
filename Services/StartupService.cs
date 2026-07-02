@@ -16,12 +16,15 @@ namespace FloatingTodoWidget.Services
 
         public static void SetEnabled(bool enable)
         {
-            using var k = Registry.CurrentUser.OpenSubKey(Key, true);
-            if (k == null) return;
-            if (enable)
-                k.SetValue(Name, $"\"{Environment.ProcessPath}\"");
-            else
-                k.DeleteValue(Name, throwOnMissingValue: false);
+            var k = Registry.CurrentUser.OpenSubKey(Key, true)
+                ?? Registry.CurrentUser.CreateSubKey(Key);
+            using (k)
+            {
+                if (enable)
+                    k.SetValue(Name, $"\"{Environment.ProcessPath}\"");
+                else
+                    k.DeleteValue(Name, throwOnMissingValue: false);
+            }
         }
     }
 }

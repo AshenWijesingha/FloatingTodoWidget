@@ -78,7 +78,8 @@ namespace FloatingTodoWidget.Services
             using var bmp = new Bitmap(16, 16);
             using var g = Graphics.FromImage(bmp);
             g.Clear(Color.Transparent);
-            g.FillEllipse(new SolidBrush(Color.FromArgb(91, 127, 255)), 0, 0, 15, 15);
+            using var brush = new SolidBrush(Color.FromArgb(91, 127, 255));
+            g.FillEllipse(brush, 0, 0, 15, 15);
             if (count > 0)
             {
                 var text = count > 99 ? "99" : count.ToString();
