@@ -9,14 +9,15 @@ namespace FloatingTodoWidget
     public partial class App : Application
     {
         private Mutex? _singleInstance;
+        private bool _ownsMutex;
         private NotificationService? _notificationService;
         private TrayIconService? _trayService;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             // ---- Single instance ----
-            _singleInstance = new Mutex(true, "FloatingTodoWidget_v2_SingleInstance", out var isNew);
-            if (!isNew)
+            _singleInstance = new Mutex(true, "FloatingTodoWidget_v2_SingleInstance", out _ownsMutex);
+            if (!_ownsMutex)
             {
                 MessageBox.Show("Floating To-Do is already running.", "Already Running",
                     MessageBoxButton.OK, MessageBoxImage.Information);
@@ -69,7 +70,7 @@ namespace FloatingTodoWidget
         {
             _notificationService?.Dispose();
             _trayService?.Dispose();
-            _singleInstance?.ReleaseMutex();
+            if (_ownsMutex) _singleInstance?.ReleaseMutex();
             _singleInstance?.Dispose();
             base.OnExit(e);
         }
