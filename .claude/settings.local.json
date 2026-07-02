@@ -39,7 +39,9 @@
       "Bash(echo \"Task 10: complete \\(commits 82f6ad0..b193990, review clean\\)\")",
       "Bash(dotnet clean:*)",
       "Bash(sed -i 's/- \\\\[ \\\\] Task 11: Build, Run & Smoke Test/- [x] Task 11: Build, Run \\\\& Smoke Test/' .superpowers/sdd/progress.md)",
-      "Bash(echo \"Task 11: complete \\(build clean — 0 errors, 2 pre-existing DPI warnings\\)\")"
+      "Bash(echo \"Task 11: complete \\(build clean — 0 errors, 2 pre-existing DPI warnings\\)\")",
+      "Bash(Start-Process:*)",
+      "Bash(cmd.exe:*)"
     ]
   }
 }
