@@ -10,7 +10,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>FloatingTodoWidget</AssemblyName>
     <Product>Floating To-Do Widget</Product>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
   <ItemGroup>

@@ -32,5 +32,28 @@ namespace FloatingTodoWidget.Models
 
         [JsonIgnore]
         public bool IsDueToday => DueDate.HasValue && DueDate.Value.Date == DateTime.Today && !IsCompleted;
+
+        /// <summary>Recurrence rule for auto-spawning the next occurrence on completion.</summary>
+        public Recurrence Recurrence { get; set; } = Recurrence.None;
+
+        /// <summary>Manual drag-and-drop position, used only when SortMode == "Manual".</summary>
+        public int SortOrder { get; set; }
+
+        // A due date change means any prior "already notified" state is stale — re-arm both.
+        partial void OnDueDateChanged(DateTime? value)
+        {
+            OverdueNotified = false;
+            DueSoonNotified = false;
+        }
+
+        // Reopening a completed task should let it notify again if it's overdue.
+        partial void OnIsCompletedChanged(bool value)
+        {
+            if (!value)
+            {
+                OverdueNotified = false;
+                DueSoonNotified = false;
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Windows;
+using System.Windows.Interop;
 using FloatingTodoWidget.Services;
 using FloatingTodoWidget.ViewModels;
 
@@ -46,6 +47,12 @@ namespace FloatingTodoWidget
             var vm     = new MainViewModel(storage, settings);
             var window = new MainWindow(vm);
 
+            // Force the window's HWND to exist now, even if we're about to start hidden in
+            // Tray mode. Window.Hide() is a no-op if the window has never been shown, which
+            // would otherwise mean OnSourceInitialized (acrylic, click-through, and the global
+            // hotkey registration) never runs until the user manually opens the window once.
+            new WindowInteropHelper(window).EnsureHandle();
+
             // Tray service must exist before notification service
             _trayService = new TrayIconService(vm, window);
 
@@ -54,8 +61,8 @@ namespace FloatingTodoWidget
             _notificationService.SetTrayIcon(_trayService.NotifyIcon);
             _notificationService.Start();
 
-            // Wire window mode changes from ViewModel to MainWindow
-            vm.WindowModeChangeRequested += (_, mode) => window.ApplyWindowMode(mode);
+            // Note: MainWindow itself subscribes to vm.WindowModeChangeRequested in its
+            // constructor; no need to subscribe again here (that would apply the mode twice).
 
             // Apply initial window mode
             if (settings.WindowMode == "Tray")

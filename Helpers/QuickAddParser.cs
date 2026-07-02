@@ -15,7 +15,8 @@ namespace FloatingTodoWidget.Helpers
         string? ProjectName,
         string[] TagNames,
         string Note,
-        string[] Links
+        string[] Links,
+        Recurrence Recurrence
     );
 
     public static class QuickAddParser
@@ -27,6 +28,10 @@ namespace FloatingTodoWidget.Helpers
         // @2026-07-05 or @today or @tomorrow
         private static readonly Regex DateRx =
             new(@"(?<!\S)@(today|tomorrow|\d{4}-\d{2}-\d{2})\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        // @daily @weekly @monthly
+        private static readonly Regex RecurrenceRx =
+            new(@"(?<!\S)@(daily|weekly|monthly)\b", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // @notify:30m or @notify:2h
         private static readonly Regex NotifyRx =
@@ -58,6 +63,7 @@ namespace FloatingTodoWidget.Helpers
             var tagNames = new List<string>();
             var note = string.Empty;
             var links = new List<string>();
+            var recurrence = Recurrence.None;
 
             // Extract URLs first (greedy, before other tokens eat text)
             foreach (Match m in UrlRx.Matches(text))
@@ -77,6 +83,20 @@ namespace FloatingTodoWidget.Helpers
                 text = text.Remove(notm.Index, notm.Length);
             }
 
+            // Extract recurrence (@daily / @weekly / @monthly)
+            var rrm = RecurrenceRx.Match(text);
+            if (rrm.Success)
+            {
+                recurrence = rrm.Groups[1].Value.ToLower() switch
+                {
+                    "daily"   => Recurrence.Daily,
+                    "weekly"  => Recurrence.Weekly,
+                    "monthly" => Recurrence.Monthly,
+                    _         => Recurrence.None
+                };
+                text = text.Remove(rrm.Index, rrm.Length);
+            }
+
             // Extract date
             var dm = DateRx.Match(text);
             if (dm.Success)
@@ -91,6 +111,10 @@ namespace FloatingTodoWidget.Helpers
                 };
                 text = text.Remove(dm.Index, dm.Length);
             }
+
+            // A recurring task needs an anchor due date; default to today if none was given.
+            if (recurrence != Recurrence.None && dueDate is null)
+                dueDate = DateTime.Today;
 
             // Extract priority
             var pm = PriorityRx.Match(text);
@@ -126,7 +150,8 @@ namespace FloatingTodoWidget.Helpers
                 ProjectName: projectName,
                 TagNames: tagNames.ToArray(),
                 Note: note,
-                Links: links.ToArray()
+                Links: links.ToArray(),
+                Recurrence: recurrence
             );
         }
     }

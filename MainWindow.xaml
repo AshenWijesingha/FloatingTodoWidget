@@ -12,7 +12,8 @@
         Background="Transparent"
         ResizeMode="CanResizeWithGrip"
         ShowInTaskbar="True"
-        Topmost="{Binding IsTopmost}">
+        Topmost="{Binding IsTopmost}"
+        Opacity="{Binding WindowOpacity}">
 
     <Window.Resources>
         <h:PriorityToBrushConverter         x:Key="PriorityBrush"/>
@@ -53,6 +54,7 @@
                 <MenuItem Header="Always on top"       IsCheckable="True" IsChecked="{Binding IsTopmost}"/>
                 <MenuItem Header="Start with Windows"  IsCheckable="True" IsChecked="{Binding AutoStart}"/>
                 <MenuItem Header="Notifications"       IsCheckable="True" IsChecked="{Binding NotificationsEnabled}"/>
+                <MenuItem Header="Global hotkey (Ctrl+Alt+T)" IsCheckable="True" IsChecked="{Binding GlobalHotkeyEnabled}"/>
                 <Separator/>
                 <MenuItem Header="Window mode">
                     <MenuItem Header="Full"     Command="{Binding SetWindowModeCommand}" CommandParameter="Full"/>
@@ -64,6 +66,19 @@
                     <MenuItem Header="Due Date"  Command="{Binding SetSortCommand}" CommandParameter="DueDate"/>
                     <MenuItem Header="Created"   Command="{Binding SetSortCommand}" CommandParameter="Created"/>
                     <MenuItem Header="A-Z"       Command="{Binding SetSortCommand}" CommandParameter="Alpha"/>
+                    <MenuItem Header="Manual (drag to reorder)" Command="{Binding SetSortCommand}" CommandParameter="Manual"/>
+                </MenuItem>
+                <MenuItem Header="Opacity">
+                    <MenuItem Header="100%" Command="{Binding SetOpacityCommand}" CommandParameter="1.0"/>
+                    <MenuItem Header="90%"  Command="{Binding SetOpacityCommand}" CommandParameter="0.9"/>
+                    <MenuItem Header="80%"  Command="{Binding SetOpacityCommand}" CommandParameter="0.8"/>
+                    <MenuItem Header="70%"  Command="{Binding SetOpacityCommand}" CommandParameter="0.7"/>
+                    <MenuItem Header="60%"  Command="{Binding SetOpacityCommand}" CommandParameter="0.6"/>
+                    <MenuItem Header="50%"  Command="{Binding SetOpacityCommand}" CommandParameter="0.5"/>
+                </MenuItem>
+                <MenuItem Header="Export">
+                    <MenuItem Header="As text (.txt)" Command="{Binding ExportTextCommand}"/>
+                    <MenuItem Header="As CSV (.csv)"  Command="{Binding ExportCsvCommand}"/>
                 </MenuItem>
                 <Separator/>
                 <MenuItem Header="Clear completed" Command="{Binding ClearCompletedCommand}"/>
@@ -92,6 +107,7 @@
             <!-- Main content -->
             <Grid x:Name="MainContent" Margin="14,12,14,8">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
@@ -138,8 +154,17 @@
                              SelectedItem="{Binding ActiveProjectTab}">
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type m:ProjectTabItem}">
-                                <TextBlock Text="{Binding Name}" FontSize="12"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Name}" FontSize="12"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <Border Margin="5,0,0,0" Padding="5,0" CornerRadius="7"
+                                            Background="{DynamicResource SurfaceAltBrush}"
+                                            VerticalAlignment="Center"
+                                            Visibility="{Binding Count, Converter={StaticResource CountToVis}}">
+                                        <TextBlock Text="{Binding Count}" FontSize="10"
+                                                   Foreground="{DynamicResource SubtleTextBrush}"/>
+                                    </Border>
+                                </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -170,8 +195,30 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- ═══ Search ═══ -->
+                <Grid Grid.Row="2" Margin="0,0,0,8">
+                    <TextBox x:Name="SearchBox"
+                             Style="{StaticResource InputBox}"
+                             FontSize="12" Padding="8,5"
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock IsHitTestVisible="False"
+                               Text="Search tasks…"
+                               FontSize="12" Margin="8,0,0,0"
+                               VerticalAlignment="Center"
+                               Foreground="{DynamicResource SubtleTextBrush}"
+                               Visibility="{Binding SearchText, Converter={StaticResource EmptyToVis}}"/>
+                    <Button HorizontalAlignment="Right" Margin="0,0,4,0"
+                            Style="{StaticResource IconButton}" Width="22" Height="22"
+                            Command="{Binding ClearSearchCommand}"
+                            Visibility="{Binding SearchText, Converter={StaticResource NonEmptyToVis}}"
+                            ToolTip="Clear search">
+                        <Path Data="M0,0 L8,8 M8,0 L0,8"
+                              Stroke="{DynamicResource SubtleTextBrush}" StrokeThickness="1.4"/>
+                    </Button>
+                </Grid>
+
                 <!-- ═══ Quick-Add Input ═══ -->
-                <Grid Grid.Row="2" Margin="0,0,0,2">
+                <Grid Grid.Row="3" Margin="0,0,0,2">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -196,14 +243,14 @@
                 </Grid>
 
                 <!-- ═══ Parse Preview ═══ -->
-                <TextBlock Grid.Row="3"
+                <TextBlock Grid.Row="4"
                            Text="{Binding ParsePreview}"
                            FontSize="11" Margin="2,2,0,6"
                            Foreground="{DynamicResource AccentBrush}"
                            Visibility="{Binding ParsePreview, Converter={StaticResource NonEmptyToVis}}"/>
 
                 <!-- ═══ Tag Filter Chips ═══ -->
-                <ItemsControl Grid.Row="4"
+                <ItemsControl Grid.Row="5"
                               ItemsSource="{Binding ActiveTagFilters}"
                               Margin="0,0,0,6"
                               Visibility="{Binding HasTagFilters, Converter={StaticResource BoolToVis}}">
@@ -231,14 +278,17 @@
                 </ItemsControl>
 
                 <!-- ═══ Task List ═══ -->
-                <ScrollViewer Grid.Row="5"
+                <ScrollViewer Grid.Row="6"
                               VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding TasksView}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type m:TodoItem}">
                                 <Border x:Name="row" Margin="0,1" CornerRadius="8"
-                                        Background="Transparent">
+                                        Background="Transparent"
+                                        AllowDrop="True"
+                                        DragOver="TaskRow_DragOver"
+                                        Drop="TaskRow_Drop">
                                     <StackPanel>
                                         <!-- Task Row -->
                                         <Grid Margin="4,5">
@@ -246,6 +296,7 @@
                                                 <ColumnDefinition Width="4"/>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
@@ -295,8 +346,21 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
 
+                                            <!-- Drag handle (Manual sort mode only) -->
+                                            <TextBlock Grid.Column="4" Margin="4,0"
+                                                       FontSize="13" FontWeight="Bold"
+                                                       Foreground="{DynamicResource SubtleTextBrush}"
+                                                       VerticalAlignment="Center"
+                                                       Cursor="SizeAll"
+                                                       Text="&#x2630;"
+                                                       ToolTip="Drag to reorder"
+                                                       MouseLeftButtonDown="DragHandle_MouseDown"
+                                                       Visibility="{Binding DataContext.IsManualSort,
+                                                           RelativeSource={RelativeSource AncestorType=Window},
+                                                           Converter={StaticResource BoolToVis}}"/>
+
                                             <!-- Delete -->
-                                            <Button Grid.Column="4" Style="{StaticResource IconButton}"
+                                            <Button Grid.Column="5" Style="{StaticResource IconButton}"
                                                     Width="24" Height="24"
                                                     Command="{Binding DataContext.DeleteTaskCommand,
                                                               RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -433,7 +497,7 @@
                 </ScrollViewer>
 
                 <!-- ═══ Footer ═══ -->
-                <DockPanel Grid.Row="6" Margin="0,8,0,0" LastChildFill="False">
+                <DockPanel Grid.Row="7" Margin="0,8,0,0" LastChildFill="False">
                     <TextBlock DockPanel.Dock="Left" FontSize="11"
                                Foreground="{DynamicResource SubtleTextBrush}">
                         <Run Text="{Binding PendingCount, Mode=OneWay}"/>

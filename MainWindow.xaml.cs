@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using FloatingTodoWidget.Helpers;
 using FloatingTodoWidget.Models;
@@ -11,10 +12,14 @@ namespace FloatingTodoWidget
 {
     public partial class MainWindow : Window
     {
+        private const int GlobalHotKeyId = 0x4A50; // arbitrary unique id for this app's hotkey
+
         private readonly MainViewModel _vm;
         private DispatcherTimer? _collapseTimer;
         private bool _isCollapsed;
         private double _storedHeight;
+        private HwndSource? _hwndSource;
+        private bool _hotKeyRegistered;
 
         public MainWindow(MainViewModel vm)
         {
@@ -37,6 +42,11 @@ namespace FloatingTodoWidget
             _vm.ShowWindowRequested += (_, _) => { Show(); Activate(); WindowState = WindowState.Normal; };
             _vm.FocusInputRequested += (_, _) => { InputBox.Focus(); InputBox.SelectAll(); };
             _vm.WindowModeChangeRequested += (_, mode) => ApplyWindowMode(mode);
+            _vm.GlobalHotkeyEnabledChanged += (_, enabled) =>
+            {
+                if (enabled) RegisterGlobalHotKey();
+                else UnregisterGlobalHotKey();
+            };
         }
 
         protected override void OnSourceInitialized(EventArgs e)
@@ -45,6 +55,40 @@ namespace FloatingTodoWidget
             if (TryFindResource("AcrylicTint") is uint tint)
                 NativeMethods.EnableAcrylic(this, tint);
             NativeMethods.SetClickThrough(this, _vm.Settings.ClickThrough);
+
+            _hwndSource = HwndSource.FromHwnd(new WindowInteropHelper(this).Handle);
+            _hwndSource?.AddHook(WndProc);
+            if (_vm.Settings.GlobalHotkeyEnabled) RegisterGlobalHotKey();
+        }
+
+        // ── Global hotkey (Ctrl+Alt+T shows/focuses the widget from anywhere) ──
+        private void RegisterGlobalHotKey()
+        {
+            if (_hotKeyRegistered) return;
+            _hotKeyRegistered = NativeMethods.RegisterGlobalHotKey(
+                this, GlobalHotKeyId,
+                NativeMethods.MOD_CONTROL | NativeMethods.MOD_ALT,
+                NativeMethods.VK_T);
+        }
+
+        private void UnregisterGlobalHotKey()
+        {
+            if (!_hotKeyRegistered) return;
+            NativeMethods.UnregisterGlobalHotKey(this, GlobalHotKeyId);
+            _hotKeyRegistered = false;
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == NativeMethods.WM_HOTKEY && wParam.ToInt32() == GlobalHotKeyId)
+            {
+                Show();
+                WindowState = WindowState.Normal;
+                Activate();
+                _vm.FocusInputCommand.Execute(null);
+                handled = true;
+            }
+            return IntPtr.Zero;
         }
 
         // ── Drag ──
@@ -101,6 +145,33 @@ namespace FloatingTodoWidget
                 _vm.OpenLinkCommand.Execute(tb.Text);
                 e.Handled = true;
             }
+        }
+
+        // ── Drag-and-drop manual reorder (only meaningful while SortMode == "Manual") ──
+        private void DragHandle_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is FrameworkElement fe && fe.DataContext is TodoItem item)
+            {
+                DragDrop.DoDragDrop(fe, item, DragDropEffects.Move);
+                e.Handled = true;
+            }
+        }
+
+        private void TaskRow_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = _vm.SortMode == "Manual" && e.Data.GetDataPresent(typeof(TodoItem))
+                ? DragDropEffects.Move
+                : DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void TaskRow_Drop(object sender, DragEventArgs e)
+        {
+            if (_vm.SortMode != "Manual") return;
+            if (sender is not FrameworkElement fe || fe.DataContext is not TodoItem target) return;
+            if (e.Data.GetData(typeof(TodoItem)) is not TodoItem dragged) return;
+            _vm.ReorderTask(dragged, target);
+            e.Handled = true;
         }
 
         // ── Collapsed bar click ──
@@ -170,6 +241,18 @@ namespace FloatingTodoWidget
                 : RestoreBounds;
             _vm.PersistWindowBounds(b.Left, b.Top, b.Width, b.Height);
             base.OnClosing(e);
+        }
+
+        // The app runs with ShutdownMode.OnExplicitShutdown so that hiding the window in
+        // Tray mode doesn't kill the process. That means closing this window (via the
+        // Exit command, Alt+F4, etc.) would otherwise leave an invisible zombie process
+        // holding the single-instance mutex forever. Explicitly shut the app down here.
+        protected override void OnClosed(EventArgs e)
+        {
+            UnregisterGlobalHotKey();
+            _hwndSource?.RemoveHook(WndProc);
+            base.OnClosed(e);
+            System.Windows.Application.Current.Shutdown();
         }
 
         private static T? FindAncestor<T>(DependencyObject current) where T : DependencyObject

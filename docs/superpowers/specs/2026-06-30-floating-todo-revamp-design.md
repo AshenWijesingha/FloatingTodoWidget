@@ -279,14 +279,14 @@ Mode persisted in settings. Switch via right-click context menu on window.
 
 ## 9. Nice-to-Have Features
 
-- [ ] Drag-and-drop task reorder within a project
-- [ ] Global keyboard shortcut to show/focus widget (Win+Shift+T or configurable)
-- [ ] "All Tasks" view across all projects
-- [ ] Search/filter by title text
-- [ ] Task count badge on project tabs
-- [ ] Recurring tasks (`@daily`, `@weekly`)
-- [ ] Export to plain text / CSV
-- [ ] Opacity slider for the window
+- [x] Drag-and-drop task reorder within a project (Manual sort mode)
+- [x] Global keyboard shortcut to show/focus widget (Ctrl+Alt+T, toggleable)
+- [x] "All Tasks" view across all projects
+- [x] Search/filter by title text
+- [x] Task count badge on project tabs
+- [x] Recurring tasks (`@daily`, `@weekly`, `@monthly`)
+- [x] Export to plain text / CSV
+- [x] Opacity presets for the window (50–100%, via context menu)
 
 ---
 
@@ -295,7 +295,34 @@ Mode persisted in settings. Switch via right-click context menu on window.
 | Package | Purpose |
 |---------|---------|
 | `CommunityToolkit.Mvvm` 8.x | ObservableObject, RelayCommand, source gen |
-| `Microsoft.Toolkit.Uwp.Notifications` | Windows toast notifications |
-| `System.Windows.Forms` (framework) | NotifyIcon for tray mode |
+| `System.Windows.Forms` (framework) | NotifyIcon for tray mode, balloon-tip notifications |
 
 No database. No heavy frameworks. Self-contained single EXE.
+
+---
+
+## 11. v2.1 Addendum — Bug Fixes & Nice-to-Have Completion
+
+All Section 9 nice-to-have items are now implemented. This pass also fixed several
+correctness bugs found during review of the v2.0 implementation:
+
+- **Exit left a zombie process.** `ShutdownMode.OnExplicitShutdown` (needed so hiding the
+  window in Tray mode doesn't kill the app) meant `window.Close()` alone never actually
+  terminated the process — the single-instance mutex stayed held forever after "Exit".
+  Fixed by shutting the `Application` down explicitly from `MainWindow.OnClosed`.
+- **`WindowModeChangeRequested` was double-subscribed** (once in `MainWindow`'s
+  constructor, once in `App.OnStartup`), applying every mode change twice.
+- **Tray icon GDI handle leak.** A new `Icon` was created from `Bitmap.GetHicon()` on every
+  `PendingCount` change but never released via `DestroyIcon`, leaking a native handle per
+  task add/complete for the life of the process.
+- **Notification flags never reset.** `OverdueNotified`/`DueSoonNotified` were set once and
+  never cleared, so editing a due date (or reopening a completed task) on an
+  already-notified task meant it would never notify again.
+- **Drag-drop `Move` vs `Remove`.** `ObservableCollection.Move` (used for manual reorder)
+  reports the moved item in both `OldItems`/`NewItems`; the existing collection-changed
+  handler treated `OldItems` as removals and would have unsubscribed the item's
+  `PropertyChanged` handler on every drag.
+- **Global hotkey + Tray startup.** `Window.Hide()` is a no-op if the window was never
+  shown, so starting directly in Tray mode meant `OnSourceInitialized` (and therefore
+  hotkey registration) never ran until the window was shown once. Fixed by forcing HWND
+  creation via `WindowInteropHelper.EnsureHandle()` at startup regardless of initial mode.

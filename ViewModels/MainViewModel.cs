@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Windows.Data;
@@ -35,6 +36,7 @@ namespace FloatingTodoWidget.ViewModels
         // ── Input ──
         [ObservableProperty] private string _newTaskText  = string.Empty;
         [ObservableProperty] private string _parsePreview = string.Empty;
+        [ObservableProperty] private string _searchText   = string.Empty;
 
         // ── Filtering / State ──
         [ObservableProperty] private ProjectTabItem? _activeProjectTab;
@@ -47,17 +49,21 @@ namespace FloatingTodoWidget.ViewModels
         [ObservableProperty] private string _windowMode  = "Full";
         [ObservableProperty] private bool   _isAddingProject;
         [ObservableProperty] private string _newProjectName = string.Empty;
+        [ObservableProperty] private bool   _globalHotkeyEnabled;
+        [ObservableProperty] private double _windowOpacity = 1.0;
 
         // ── Computed ──
-        public int  PendingCount  => Tasks.Count(t => !t.IsCompleted);
-        public bool HasCompleted  => Tasks.Any(t => t.IsCompleted);
-        public bool HasTagFilters => ActiveTagFilters.Count > 0;
+        public int  PendingCount   => Tasks.Count(t => !t.IsCompleted);
+        public bool HasCompleted   => Tasks.Any(t => t.IsCompleted);
+        public bool HasTagFilters  => ActiveTagFilters.Count > 0;
+        public bool IsManualSort   => SortMode == "Manual";
 
         // ── Events ──
         public event EventHandler? ExitRequested;
         public event EventHandler? FocusInputRequested;
         public event EventHandler? ShowWindowRequested;
         public event EventHandler<string>? WindowModeChangeRequested;
+        public event EventHandler<bool>?   GlobalHotkeyEnabledChanged;
         public event EventHandler? DataChanged; // for NotificationService to re-check
 
         // ── Computed helpers ──
@@ -75,6 +81,8 @@ namespace FloatingTodoWidget.ViewModels
             _notificationsEnabled = settings.NotificationsEnabled;
             _sortMode             = settings.SortMode;
             _windowMode           = settings.WindowMode;
+            _globalHotkeyEnabled  = settings.GlobalHotkeyEnabled;
+            _windowOpacity        = settings.WindowOpacity;
 
             // Build view before loading so filter works immediately
             TasksView = CollectionViewSource.GetDefaultView(Tasks);
@@ -110,6 +118,9 @@ namespace FloatingTodoWidget.ViewModels
             }
             if (ActiveTagFilters.Count > 0 && !ActiveTagFilters.Any(tag => t.TagIds.Contains(tag.Id)))
                 return false;
+            if (!string.IsNullOrWhiteSpace(SearchText) &&
+                t.Title.IndexOf(SearchText, StringComparison.OrdinalIgnoreCase) < 0)
+                return false;
             return true;
         }
 
@@ -136,6 +147,9 @@ namespace FloatingTodoWidget.ViewModels
                 case "Alpha":
                     return string.Compare(a.Title, b.Title, StringComparison.OrdinalIgnoreCase);
 
+                case "Manual":
+                    return a.SortOrder.CompareTo(b.SortOrder);
+
                 default: // "Priority"
                     c = b.Priority.CompareTo(a.Priority);
                     if (c != 0) return c;
@@ -153,6 +167,25 @@ namespace FloatingTodoWidget.ViewModels
             OnPropertyChanged(nameof(PendingCount));
             OnPropertyChanged(nameof(HasCompleted));
             OnPropertyChanged(nameof(HasTagFilters));
+            RecomputeTabCounts();
+        }
+
+        partial void OnSearchTextChanged(string value) => RefreshView();
+
+        [RelayCommand]
+        private void ClearSearch() => SearchText = string.Empty;
+
+        private void RecomputeTabCounts()
+        {
+            foreach (var tab in ProjectTabs)
+            {
+                if (!tab.Id.HasValue)
+                    tab.Count = Tasks.Count(t => !t.IsCompleted);
+                else if (tab.Id.Value == Guid.Empty)
+                    tab.Count = Tasks.Count(t => !t.IsCompleted && !t.ProjectId.HasValue);
+                else
+                    tab.Count = Tasks.Count(t => !t.IsCompleted && t.ProjectId == tab.Id);
+            }
         }
 
         // ─────────────────── Project Tabs ───────────────────
@@ -168,6 +201,8 @@ namespace FloatingTodoWidget.ViewModels
             ActiveProjectTab = selectId.HasValue
                 ? ProjectTabs.FirstOrDefault(t => t.Id == selectId) ?? ProjectTabs[0]
                 : ProjectTabs[0];
+
+            RecomputeTabCounts();
         }
 
         partial void OnActiveProjectTabChanged(ProjectTabItem? value)
@@ -233,7 +268,9 @@ namespace FloatingTodoWidget.ViewModels
                     ProjectId           = projectId,
                     TagIds              = tagIds,
                     Notes               = r.Note,
-                    Links               = r.Links.ToList()
+                    Links               = r.Links.ToList(),
+                    Recurrence          = r.Recurrence,
+                    SortOrder           = Tasks.Count
                 };
 
                 _data.Tasks.Add(item);
@@ -401,10 +438,41 @@ namespace FloatingTodoWidget.ViewModels
             if (string.IsNullOrEmpty(mode)) return;
             SortMode = mode;
             Settings.SortMode = mode;
+            if (mode == "Manual")
+                NormalizeManualSortOrder();
             if (TasksView is ListCollectionView lcv)
                 lcv.CustomSort = Comparer<TodoItem>.Create(CompareTasks);
             TasksView.Refresh();
+            OnPropertyChanged(nameof(IsManualSort));
             SaveSettings();
+        }
+
+        // Seeds SortOrder from the current on-screen order the first time Manual mode is
+        // entered, so switching to Manual doesn't suddenly scramble the list.
+        private void NormalizeManualSortOrder()
+        {
+            int i = 0;
+            foreach (var item in Tasks.OrderBy(t => t.IsCompleted).ThenBy(t => t.SortOrder))
+                item.SortOrder = i++;
+        }
+
+        // Drag-and-drop reorder, only meaningful while SortMode == "Manual".
+        public void ReorderTask(TodoItem dragged, TodoItem target)
+        {
+            if (SortMode != "Manual" || ReferenceEquals(dragged, target)) return;
+
+            var oldIndex = Tasks.IndexOf(dragged);
+            var newIndex = Tasks.IndexOf(target);
+            if (oldIndex < 0 || newIndex < 0) return;
+
+            Tasks.Move(oldIndex, newIndex);
+            for (int i = 0; i < Tasks.Count; i++)
+                Tasks[i].SortOrder = i;
+
+            if (TasksView is ListCollectionView lcv)
+                lcv.CustomSort = Comparer<TodoItem>.Create(CompareTasks);
+            RefreshView();
+            SaveData();
         }
 
         // ─────────────────── Settings ───────────────────
@@ -444,6 +512,47 @@ namespace FloatingTodoWidget.ViewModels
             WindowModeChangeRequested?.Invoke(this, value);
         }
 
+        partial void OnGlobalHotkeyEnabledChanged(bool value)
+        {
+            Settings.GlobalHotkeyEnabled = value;
+            SaveSettings();
+            GlobalHotkeyEnabledChanged?.Invoke(this, value);
+        }
+
+        partial void OnWindowOpacityChanged(double value)
+        {
+            Settings.WindowOpacity = value;
+            SaveSettings();
+        }
+
+        [RelayCommand]
+        private void SetOpacity(string? value)
+        {
+            if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d))
+                WindowOpacity = Math.Clamp(d, 0.2, 1.0);
+        }
+
+        // ─────────────────── Export ───────────────────
+
+        [RelayCommand]
+        private void ExportText() => Export(ExportService.ExportText, "Text file (*.txt)|*.txt", "txt");
+
+        [RelayCommand]
+        private void ExportCsv() => Export(ExportService.ExportCsv, "CSV file (*.csv)|*.csv", "csv");
+
+        private void Export(Action<IEnumerable<TodoItem>, IEnumerable<Project>, string> writer, string filter, string ext)
+        {
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter   = filter,
+                FileName = $"tasks.{ext}"
+            };
+            if (dialog.ShowDialog() != true) return;
+
+            try { writer(Tasks, Projects, dialog.FileName); }
+            catch (Exception ex) { Logger.Error("Export failed", ex); }
+        }
+
         // ─────────────────── Parse Preview ───────────────────
 
         partial void OnNewTaskTextChanged(string value)
@@ -453,6 +562,7 @@ namespace FloatingTodoWidget.ViewModels
             var parts = new List<string>();
             if (r.Priority != Priority.None)   parts.Add($"!{r.Priority}");
             if (r.DueDate.HasValue)             parts.Add($"Due {r.DueDate:MMM d}");
+            if (r.Recurrence != Recurrence.None) parts.Add($"↻ {r.Recurrence}");
             if (r.ProjectName != null)          parts.Add($"#{r.ProjectName}");
             if (r.TagNames.Length > 0)          parts.Add("~" + string.Join(",", r.TagNames));
             if (!string.IsNullOrEmpty(r.Note))  parts.Add($"\"{(r.Note.Length > 20 ? r.Note[..20] + "\u2026" : r.Note)}\"");
@@ -469,17 +579,55 @@ namespace FloatingTodoWidget.ViewModels
 
         private void OnTasksChanged(object? sender, NotifyCollectionChangedEventArgs e)
         {
-            if (e.OldItems != null)
+            // A Move (drag-drop reorder) reports the same item(s) in OldItems/NewItems — it
+            // isn't a removal, so it must not unsubscribe the item's PropertyChanged handler.
+            if (e.Action != NotifyCollectionChangedAction.Move && e.OldItems != null)
                 foreach (TodoItem i in e.OldItems) i.PropertyChanged -= OnItemChanged;
             RefreshView();
         }
 
         private void OnItemChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
+            if (sender is TodoItem item && e.PropertyName == nameof(TodoItem.IsCompleted) &&
+                item.IsCompleted && !_suspendSave)
+                SpawnNextRecurrence(item);
+
             if (e.PropertyName is nameof(TodoItem.IsCompleted) or nameof(TodoItem.Priority))
                 RefreshView();
             if (!_suspendSave && e.PropertyName != nameof(TodoItem.IsExpanded))
                 SaveData();
+        }
+
+        // Completing a recurring task spawns its next occurrence, offset by one interval
+        // from the due date that was just completed (not from "now"), so a task done early
+        // or late doesn't drift the schedule.
+        private void SpawnNextRecurrence(TodoItem completed)
+        {
+            if (completed.Recurrence == Recurrence.None || !completed.DueDate.HasValue) return;
+
+            var nextDue = completed.Recurrence switch
+            {
+                Recurrence.Daily   => completed.DueDate.Value.AddDays(1),
+                Recurrence.Weekly  => completed.DueDate.Value.AddDays(7),
+                Recurrence.Monthly => completed.DueDate.Value.AddMonths(1),
+                _                  => completed.DueDate.Value
+            };
+
+            var next = new TodoItem
+            {
+                Title               = completed.Title,
+                Priority            = completed.Priority,
+                DueDate             = nextDue,
+                NotifyMinutesBefore = completed.NotifyMinutesBefore,
+                ProjectId           = completed.ProjectId,
+                TagIds              = new List<Guid>(completed.TagIds),
+                Notes               = completed.Notes,
+                Recurrence          = completed.Recurrence,
+                SortOrder           = Tasks.Count
+            };
+
+            SubscribeItem(next);
+            Tasks.Add(next);
         }
 
         private void SaveData()

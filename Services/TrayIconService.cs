@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows;
 using FloatingTodoWidget.ViewModels;
 
@@ -7,9 +8,20 @@ namespace FloatingTodoWidget.Services
 {
     public sealed class TrayIconService : IDisposable
     {
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
         private readonly MainViewModel _vm;
         private readonly Window _window;
         private readonly System.Windows.Forms.NotifyIcon _icon;
+
+        // The Icon assigned to NotifyIcon.Icon and the raw HICON it wraps (from Bitmap.GetHicon()).
+        // Icon.Dispose() does NOT release a handle obtained via GetHicon()/FromHandle() — the docs
+        // are explicit that the caller must call DestroyIcon separately, or the handle leaks for
+        // the life of the process. We recreate this icon every time PendingCount changes, so both
+        // must be torn down on every update (and on Dispose) to avoid exhausting GDI handles.
+        private System.Drawing.Icon? _currentIcon;
+        private IntPtr _currentHIcon = IntPtr.Zero;
 
         public System.Windows.Forms.NotifyIcon NotifyIcon => _icon;
 
@@ -21,9 +33,9 @@ namespace FloatingTodoWidget.Services
             _icon = new System.Windows.Forms.NotifyIcon
             {
                 Text    = "Floating To-Do",
-                Visible = true,
-                Icon    = CreateIcon(vm.PendingCount)
+                Visible = true
             };
+            SetIcon(vm.PendingCount);
 
             // Context menu
             _icon.ContextMenuStrip = BuildContextMenu();
@@ -38,8 +50,22 @@ namespace FloatingTodoWidget.Services
             vm.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName == nameof(MainViewModel.PendingCount))
-                    _icon.Icon = CreateIcon(vm.PendingCount);
+                    SetIcon(vm.PendingCount);
             };
+        }
+
+        private void SetIcon(int count)
+        {
+            var (icon, hIcon) = CreateIconWithHandle(count);
+            _icon.Icon = icon;
+
+            // Safe to tear down the previous icon now: NotifyIcon has already switched to the
+            // new one, so nothing will reference the old handle again.
+            _currentIcon?.Dispose();
+            if (_currentHIcon != IntPtr.Zero) DestroyIcon(_currentHIcon);
+
+            _currentIcon  = icon;
+            _currentHIcon = hIcon;
         }
 
         private System.Windows.Forms.ContextMenuStrip BuildContextMenu()
@@ -72,7 +98,7 @@ namespace FloatingTodoWidget.Services
             return menu;
         }
 
-        private static System.Drawing.Icon CreateIcon(int count)
+        private static (System.Drawing.Icon Icon, IntPtr HIcon) CreateIconWithHandle(int count)
         {
             // Draw a 16x16 icon with optional count badge
             using var bmp = new Bitmap(16, 16);
@@ -91,13 +117,18 @@ namespace FloatingTodoWidget.Services
                 };
                 g.DrawString(text, font, Brushes.White, new RectangleF(0, 0, 16, 16), sf);
             }
-            return System.Drawing.Icon.FromHandle(bmp.GetHicon());
+            var hIcon = bmp.GetHicon();
+            return (System.Drawing.Icon.FromHandle(hIcon), hIcon);
         }
 
         public void Dispose()
         {
             _icon.Visible = false;
+            _icon.ContextMenuStrip?.Dispose();
             _icon.Dispose();
+            _currentIcon?.Dispose();
+            if (_currentHIcon != IntPtr.Zero) DestroyIcon(_currentHIcon);
+            _currentHIcon = IntPtr.Zero;
         }
     }
 }
